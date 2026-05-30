@@ -452,7 +452,7 @@ const S = {
   loadingText: { marginTop: 18, fontSize: 18, color: "#5a4a30", fontStyle: "italic", fontFamily: "'Crimson Text', Georgia, serif", lineHeight: 1.4 },
   loadingSub: { fontFamily: "'Special Elite', 'Courier New', monospace", fontSize: 9, color: "#a09070", marginTop: 6, letterSpacing: "0.14em" },
   // Tab search bar
-  tabSearch: { display: "flex", alignItems: "center", gap: 8, margin: "10px 16px 4px", padding: "8px 12px", background: "rgba(42,26,10,0.05)", border: "1px solid rgba(42,26,10,0.13)", borderRadius: 3 },
+  tabSearch: { display: "flex", alignItems: "center", gap: 8, margin: "10px 16px 4px", padding: "8px 12px", background: "#f5e8c8", border: "1px solid rgba(154,106,52,0.3)", borderRadius: 0, borderLeft: "3px solid rgba(154,106,52,0.4)" },
   tabSearchInput: { flex: 1, border: "none", background: "transparent", fontFamily: "'Crimson Text', Georgia, serif", fontSize: 15, color: "#1a0e04", outline: "none" },
   tabSearchClear: { background: "none", border: "none", cursor: "pointer", fontSize: 14, color: "#b0a090", padding: "0 2px", lineHeight: 1 },
   // Footer — matches the dark header binding
@@ -642,8 +642,9 @@ function WikiImage({ query, genusFallback = false }) {
   if (status === "idle") return null;
 
   if (status === "loading") return (
-    <div style={{ marginTop: 12, padding: "8px 12px", background: "#f5e8c8", border: "1px dashed rgba(154,106,52,0.35)", borderRadius: 0, fontFamily: "'Special Elite', 'Courier New', monospace", fontSize: 9, color: "#9a7a50", textAlign: "center", letterSpacing: "0.1em" }}>
-      ✎ consulting field records…
+    <div style={{ marginTop: 12, padding: "12px 14px", background: "#f5e8c8", border: "1px dashed rgba(154,106,52,0.4)", borderRadius: 0, display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ width: 20, height: 20, border: "2px solid rgba(154,106,52,0.3)", borderTopColor: "#9a6a34", borderRadius: "50%", animation: "spin 1.4s linear infinite", flexShrink: 0 }} />
+      <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 9, color: "#9a7a50", letterSpacing: "0.1em" }}>consulting field records…</span>
     </div>
   );
 
@@ -680,6 +681,18 @@ function WikiImage({ query, genusFallback = false }) {
   );
 }
 
+// Small handwritten marginal notes a field geologist might scrawl beside a unit
+const MARGIN_NOTES = [
+  "good exposure", "cf. above", "collect here", "see fig. 2", "unconformity?",
+  "recheck age", "fossiliferous", "note colour", "cross-bedded", "friable",
+  "well-cemented", "recessive", "resistant unit", "bioturbated", "pyrite nodules",
+];
+function getMarginNote(unit) {
+  const hash = unit.strat_name.split("").reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0);
+  if (Math.abs(hash) % 3 !== 0) return null;
+  return MARGIN_NOTES[Math.abs(hash) % MARGIN_NOTES.length];
+}
+
 function StratLayer({ unit, index, isSelected, onClick }) {
   const period = getPeriodForAge((unit.b_age + unit.t_age) / 2);
   const ageSpan = unit.b_age - unit.t_age;
@@ -687,6 +700,7 @@ function StratLayer({ unit, index, isSelected, onClick }) {
   const icon = getEnvIcon(unit.environ);
   const description = getFormationDescription(unit, period);
   const whatItLookedLike = getWhatItLookedLike(unit, period);
+  const marginNote = getMarginNote(unit);
 
   return (
     <div>
@@ -699,8 +713,18 @@ function StratLayer({ unit, index, isSelected, onClick }) {
           <span style={{ position: "relative", zIndex: 1 }}>{icon}</span>
         </div>
         <div style={S.stratInfo}>
-          <div style={S.stratName}>{unit.strat_name}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={S.stratName}>{unit.strat_name}</div>
+            <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, color: "rgba(154,106,52,0.55)", letterSpacing: "0.08em", flexShrink: 0, marginTop: 4, marginLeft: 6 }}>
+              {isSelected ? "▲ close" : "▼ examine"}
+            </span>
+          </div>
           <div style={S.stratMeta}>{period.name} · {unit.lith}</div>
+          {marginNote && (
+            <div style={{ fontFamily: "'Caveat', cursive", fontSize: 12, color: "rgba(100,55,15,0.45)", marginTop: 2, transform: "rotate(-1deg)", display: "inline-block" }}>
+              ✎ {marginNote}
+            </div>
+          )}
         </div>
       </div>
       {isSelected && (
@@ -826,8 +850,9 @@ function FossilCard({ fossil }) {
   const [expanded, setExpanded] = useState(false);
   const period = getPeriodForAge((fossil.max_ma + fossil.min_ma) / 2);
   const description = getFossilDescription(fossil, period);
-  // Pseudo-specimen number from age — gives each fossil a plausible catalog number
-  const specNum = String(Math.floor(fossil.max_ma * 7 + fossil.min_ma * 3) % 9999 + 1000).slice(0, 4);
+  // Specimen number hashed from species name — unique per taxon
+  const nameHash = fossil.tna.split("").reduce((h, c) => (Math.imul(31, h) + c.charCodeAt(0)) | 0, 0);
+  const specNum = String((Math.abs(nameHash) % 9000) + 1000);
 
   return (
     <div style={{ ...S.fossilCard, cursor: "pointer", position: "relative" }} onClick={() => setExpanded(e => !e)}>
@@ -843,10 +868,15 @@ function FossilCard({ fossil }) {
         </div>
         <span style={{ fontSize: 10, color: "#b0a090", fontFamily: "monospace", marginLeft: 8, flexShrink: 0, marginTop: 4, display: "none" }}>{expanded ? "▲" : "▼"}</span>
       </div>
-      <div style={S.fossilMeta}>
-        <span><span style={S.fossilDot(period.color)} /> {period.name}</span>
-        <span>{fossil.max_ma}–{fossil.min_ma} Ma</span>
-        {fossil.phl && <span>{fossil.phl}</span>}
+      <div style={{ ...S.fossilMeta, justifyContent: "space-between" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px" }}>
+          <span><span style={S.fossilDot(period.color)} /> {period.name}</span>
+          <span>{fossil.max_ma}–{fossil.min_ma} Ma</span>
+          {fossil.phl && <span>{fossil.phl}</span>}
+        </div>
+        <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, color: "rgba(154,106,52,0.55)", letterSpacing: "0.08em", flexShrink: 0 }}>
+          {expanded ? "▲ close" : "▼ examine"}
+        </span>
       </div>
       {expanded && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(200,149,108,0.2)" }}>
@@ -1194,14 +1224,14 @@ export default function DeepTimeFieldGuide() {
         {screen === "results" ? (
           <div>
             <button style={S.locationBtn} onClick={handleBack}>
-              {"📍"} {locationName} · {units.length} formations · ← Back
+              {"📍"} {locationName} · {units.length} formations · ← return to field notes
             </button>
             <div style={{...S.dataBadge, ...(isLive ? S.liveBadge : S.demoBadge)}}>
-              {isLive ? "🟢 Live API data" : "🟠 Demo data (APIs unavailable in preview)"}
+              {isLive ? "🟢 Live data" : "🟠 Sample data"}
             </div>
           </div>
         ) : (
-          <div style={S.tagline}>Tap a location. See millions of years of Earth history.</div>
+          <div style={S.tagline}>Select a survey site to read the stratigraphic record.</div>
         )}
       </div>
 
@@ -1217,19 +1247,33 @@ export default function DeepTimeFieldGuide() {
       {screen === "pick" && (
         <div style={S.locScreen}>
 
+          {/* Inside-cover field journal card */}
+          <div style={{ margin: "0 0 24px", padding: "14px 18px 16px", background: "#f5e8c8", border: "1px solid rgba(42,26,10,0.18)", borderRadius: "0 0 3px 3px", backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(80,50,15,0.08) 27px, rgba(80,50,15,0.08) 28px)", boxShadow: "0 2px 8px rgba(42,26,10,0.1), inset 0 -3px 0 rgba(42,26,10,0.06)" }}>
+            <div style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase", color: "#9a6a34", marginBottom: 10 }}>◆ Field Journal — Vol. I ◆</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {[["Survey Area", "North America (primary)"], ["Institution", "Deep Time Studios"], ["Subject", "Stratigraphic & Palaeontological Survey"], ["Method", "Macrostrat · PBDB · Field Observation"]].map(([label, val]) => (
+                <div key={label} style={{ display: "flex", gap: 8, borderBottom: "1px solid rgba(42,26,10,0.1)", paddingBottom: 5 }}>
+                  <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, color: "#9a7a50", letterSpacing: "0.1em", textTransform: "uppercase", width: 80, flexShrink: 0, paddingTop: 2 }}>{label}</span>
+                  <span style={{ fontFamily: "'Crimson Text', Georgia, serif", fontSize: 14, color: "#2a1a0a" }}>{val}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 10, fontFamily: "'Caveat', cursive", fontSize: 13, color: "rgba(100,50,15,0.5)", transform: "rotate(-1deg)", display: "inline-block" }}>If found, please return to field station.</div>
+          </div>
+
           {/* GPS Button */}
           <button
             style={{ ...S.gpsBtn, ...(gpsLoading ? S.gpsBtnDisabled : {}) }}
             onClick={handleGPS}
             disabled={gpsLoading}
           >
-            {gpsLoading ? "📡 Locating you..." : "📱 Use My Location"}
+            {gpsLoading ? "📡 Acquiring fix…" : "📡 Fix My Position"}
           </button>
 
           {/* Place Search */}
           <div style={{ position: "relative", marginBottom: 20 }}>
             <input
-              style={{ width: "100%", padding: "10px 12px 10px 34px", border: "none", borderBottom: "2px solid rgba(154,106,52,0.45)", borderRadius: 0, fontFamily: "'Crimson Text', Georgia, serif", fontSize: 16, background: "rgba(200,160,90,0.07)", color: "#2a1a0a", outline: "none", boxSizing: "border-box", backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(80,50,15,0.07) 27px, rgba(80,50,15,0.07) 28px)" }}
+              style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(154,106,52,0.3)", borderBottom: "2px solid rgba(154,106,52,0.5)", borderRadius: 0, fontFamily: "'Crimson Text', Georgia, serif", fontSize: 16, background: "#f5e8c8", color: "#2a1a0a", outline: "none", boxSizing: "border-box" }}
               type="text"
               placeholder="🔍 Search for a place..."
               value={searchQuery}
@@ -1277,7 +1321,7 @@ export default function DeepTimeFieldGuide() {
             )}
           </div>
 
-          <div style={S.divider}>── or explore a preset ──</div>
+          <div style={S.divider}>── known field sites ──</div>
 
           <div style={S.presetGrid}>
             {PRESETS.map((p, i) => {
@@ -1638,9 +1682,9 @@ export default function DeepTimeFieldGuide() {
 
       {/* Footer */}
       <div style={S.footer}>
-        Data: Macrostrat · Paleobiology Database
-        <br />Built by Arjun Ravi · Deep Time Studios
-        <br />{"◆"} v0.2 {"◆"}
+        Field Journal No. 1 · Deep Time Studios
+        <br />Stratigraphic data: Macrostrat · Fossil occurrences: PBDB
+        <br />{"◆"} compiled by Arjun Ravi · v0.2 {"◆"}
       </div>
     </div>
   );
