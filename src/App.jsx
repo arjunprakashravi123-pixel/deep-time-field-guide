@@ -729,39 +729,35 @@ function StratLayer({ unit, index, isSelected, onClick }) {
       </div>
       {isSelected && (
         <div style={S.stratDetail}>
-          <div style={S.detailRow}>
-            <span style={S.detailLabel}>Age Range</span>
-            <span style={S.detailValue}>{unit.b_age}–{unit.t_age} Ma</span>
-          </div>
-          <div style={S.detailRow}>
-            <span style={S.detailLabel}>In Plain Terms</span>
-            <span style={S.detailValue}>{formatAge(unit.b_age)} → {formatAge(unit.t_age)}</span>
-          </div>
-          <div style={S.detailRow}>
-            <span style={S.detailLabel}>Period / Era</span>
-            <span style={S.detailValue}>{period.name} ({period.era})</span>
-          </div>
-          <div style={S.detailRow}>
-            <span style={S.detailLabel}>Lithology</span>
-            <span style={S.detailValue}>{unit.lith}</span>
-          </div>
-          {unit.environ && (
+          {/* Hero narrative — biggest and most readable, front and centre */}
+          <p style={{ fontSize: 15, color: "#1a0e04", lineHeight: 1.82, fontFamily: "'Crimson Text', Georgia, serif", margin: "0 0 8px", fontWeight: 500 }}>
+            {whatItLookedLike}
+          </p>
+          <p style={{ fontSize: 13, color: "#4a3a2a", lineHeight: 1.65, fontFamily: "'Crimson Text', Georgia, serif", margin: "0 0 12px", fontStyle: "italic" }}>
+            {description}
+          </p>
+          {/* Technical field data — de-emphasised below the fold */}
+          <div style={{ borderTop: "1px dashed rgba(154,106,52,0.28)", paddingTop: 10, opacity: 0.72 }}>
             <div style={S.detailRow}>
-              <span style={S.detailLabel}>Environment</span>
-              <span style={S.detailValue}>{unit.environ}</span>
+              <span style={S.detailLabel}>Period / Era</span>
+              <span style={S.detailValue}>{period.name} · {period.era}</span>
             </div>
-          )}
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(200,149,108,0.15)" }}>
-            <div style={S.detailLabel}>🌍 What it looked like then</div>
-            <p style={{ fontSize: 13, color: "#2a1a0a", lineHeight: 1.65, fontFamily: "'Crimson Text', Georgia, serif", margin: "6px 0 10px 0", fontWeight: 500 }}>
-              {whatItLookedLike}
-            </p>
-            <div style={S.detailLabel}>About this rock type</div>
-            <p style={{ fontSize: 13, color: "#4a3a2a", lineHeight: 1.65, fontFamily: "'Crimson Text', Georgia, serif", margin: "6px 0 0 0", fontStyle: "italic" }}>
-              {description}
-            </p>
-            <WikiImage query={unit.strat_name} />
+            <div style={S.detailRow}>
+              <span style={S.detailLabel}>Lithology</span>
+              <span style={S.detailValue}>{unit.lith}</span>
+            </div>
+            {unit.environ && (
+              <div style={S.detailRow}>
+                <span style={S.detailLabel}>Environment</span>
+                <span style={S.detailValue}>{unit.environ}</span>
+              </div>
+            )}
+            <div style={S.detailRow}>
+              <span style={S.detailLabel}>Age</span>
+              <span style={S.detailValue}>{formatAge(unit.b_age)} → {formatAge(unit.t_age)}</span>
+            </div>
           </div>
+          <WikiImage query={unit.strat_name} />
         </div>
       )}
     </div>
@@ -871,7 +867,7 @@ function FossilCard({ fossil }) {
       <div style={{ ...S.fossilMeta, justifyContent: "space-between" }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 12px" }}>
           <span><span style={S.fossilDot(period.color)} /> {period.name}</span>
-          <span>{fossil.max_ma}–{fossil.min_ma} Ma</span>
+          <span>{period.era}</span>
           {fossil.phl && <span>{fossil.phl}</span>}
         </div>
         <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, color: "rgba(154,106,52,0.55)", letterSpacing: "0.08em", flexShrink: 0 }}>
@@ -988,6 +984,9 @@ export default function DeepTimeFieldGuide() {
   const [strataSearch, setStrataSearch] = useState("");
   const [fossilSearch, setFossilSearch] = useState("");
   const [timelineSearch, setTimelineSearch] = useState("");
+  const [showTutorial, setShowTutorial] = useState(true);
+  const [strataEraFilter, setStrataEraFilter] = useState(null); // null = show all
+  const [fossilEraFilter, setFossilEraFilter] = useState(null);
 
   const loadLocation = useCallback(async (name, lat, lng) => {
     setScreen("loading");
@@ -1031,6 +1030,8 @@ export default function DeepTimeFieldGuide() {
     setStrataSearch("");
     setFossilSearch("");
     setTimelineSearch("");
+    setStrataEraFilter(null);
+    setFossilEraFilter(null);
   };
 
   const handleGPS = () => {
@@ -1247,78 +1248,162 @@ export default function DeepTimeFieldGuide() {
       {screen === "pick" && (
         <div style={S.locScreen}>
 
-          {/* Inside-cover field journal card */}
-          <div style={{ margin: "0 0 24px", padding: "14px 18px 16px", background: "#f5e8c8", border: "1px solid rgba(42,26,10,0.18)", borderRadius: "0 0 3px 3px", backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(80,50,15,0.08) 27px, rgba(80,50,15,0.08) 28px)", boxShadow: "0 2px 8px rgba(42,26,10,0.1), inset 0 -3px 0 rgba(42,26,10,0.06)" }}>
-            <div style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase", color: "#9a6a34", marginBottom: 10 }}>◆ Field Journal — Vol. I ◆</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {[["Survey Area", "North America (primary)"], ["Institution", "Deep Time Studios"], ["Subject", "Stratigraphic & Palaeontological Survey"], ["Method", "Macrostrat · PBDB · Field Observation"]].map(([label, val]) => (
-                <div key={label} style={{ display: "flex", gap: 8, borderBottom: "1px solid rgba(42,26,10,0.1)", paddingBottom: 5 }}>
-                  <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, color: "#9a7a50", letterSpacing: "0.1em", textTransform: "uppercase", width: 80, flexShrink: 0, paddingTop: 2 }}>{label}</span>
-                  <span style={{ fontFamily: "'Crimson Text', Georgia, serif", fontSize: 14, color: "#2a1a0a" }}>{val}</span>
+          {/* ── Tutorial card — dismissible ── */}
+          {showTutorial && (
+            <div style={{ margin: "0 0 22px", background: "#1a2916", borderRadius: 3, padding: "18px 18px 14px", position: "relative", boxShadow: "0 3px 14px rgba(0,0,0,0.28)", border: "1px solid rgba(200,149,108,0.22)" }}>
+              <div style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, letterSpacing: "0.3em", textTransform: "uppercase", color: "#c8956c", marginBottom: 14, textAlign: "center" }}>◆ How to use this guide ◆</div>
+              {/* 3-step mini diagram */}
+              <div style={{ display: "flex", gap: 0, alignItems: "flex-start", marginBottom: 14 }}>
+                {[
+                  { icon: "📡", label: "Fix Position", sub: "Use GPS or search for any place on Earth" },
+                  { icon: "🪨", label: "Read Strata", sub: "See every rock layer beneath that spot, oldest to youngest" },
+                  { icon: "🦴", label: "Find Fossils", sub: "Browse fossil taxa found within 100km of your site" },
+                ].map((step, i) => (
+                  <div key={i} style={{ flex: 1, textAlign: "center", padding: "0 6px", position: "relative" }}>
+                    {i > 0 && (
+                      <div style={{ position: "absolute", left: 0, top: 18, width: 12, height: 1, background: "rgba(200,149,108,0.35)" }} />
+                    )}
+                    <div style={{ fontSize: 26, marginBottom: 6 }}>{step.icon}</div>
+                    <div style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, letterSpacing: "0.1em", textTransform: "uppercase", color: "#c8956c", marginBottom: 4 }}>{step.label}</div>
+                    <div style={{ fontFamily: "'Crimson Text', Georgia, serif", fontSize: 11, color: "rgba(230,210,170,0.7)", lineHeight: 1.5 }}>{step.sub}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Mini strata diagram */}
+              <div style={{ margin: "0 0 12px", borderRadius: 2, overflow: "hidden", border: "1px solid rgba(200,149,108,0.15)" }}>
+                {[
+                  { color: "#F9F97F", label: "Quaternary", desc: "Ice Ages · mammals" },
+                  { color: "#7FC64E", label: "Cretaceous", desc: "Dinosaur era" },
+                  { color: "#34B2C9", label: "Jurassic", desc: "Great forests" },
+                  { color: "#F04028", label: "Permian", desc: "Pangaea · mass extinction" },
+                  { color: "#009270", label: "Ordovician", desc: "Ancient seas" },
+                ].map((layer, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px", background: "rgba(0,0,0,0.25)", borderBottom: i < 4 ? "1px solid rgba(200,149,108,0.08)" : "none" }}>
+                    <div style={{ width: 8, height: 16, background: layer.color, flexShrink: 0, opacity: 0.85 }} />
+                    <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, color: "#c8956c", letterSpacing: "0.08em", width: 70, flexShrink: 0 }}>{layer.label}</span>
+                    <span style={{ fontFamily: "'Crimson Text', Georgia, serif", fontSize: 10, color: "rgba(230,210,170,0.55)", fontStyle: "italic" }}>{layer.desc}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowTutorial(false)}
+                style={{ width: "100%", padding: "8px", background: "rgba(200,149,108,0.15)", border: "1px solid rgba(200,149,108,0.3)", borderRadius: 2, fontFamily: "'Special Elite', monospace", fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: "#c8956c", cursor: "pointer" }}
+              >
+                Get Started →
+              </button>
+            </div>
+          )}
+
+          {/* ── GPS — hero CTA ── */}
+          <div style={{ marginBottom: 20 }}>
+            <button
+              style={{ ...S.gpsBtn, ...(gpsLoading ? S.gpsBtnDisabled : {}), fontSize: 20, padding: "18px 14px", flexDirection: "column", gap: 4 }}
+              onClick={handleGPS}
+              disabled={gpsLoading}
+            >
+              <span>{gpsLoading ? "📡 Acquiring fix…" : "📡 Fix My Position"}</span>
+              {!gpsLoading && <span style={{ fontFamily: "'Crimson Text', Georgia, serif", fontSize: 12, color: "rgba(240,220,170,0.6)", fontWeight: 400, fontStyle: "italic", letterSpacing: 0 }}>Use your current location — the most accurate survey possible</span>}
+            </button>
+          </div>
+
+          {/* ── Search + Coordinates — consolidated location input area ── */}
+          <div style={{ marginBottom: 20 }}>
+            {/* Place search */}
+            <div style={{ position: "relative", marginBottom: 8 }}>
+              <input
+                style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(154,106,52,0.3)", borderBottom: "2px solid rgba(154,106,52,0.5)", borderRadius: 0, fontFamily: "'Crimson Text', Georgia, serif", fontSize: 16, background: "#f5e8c8", color: "#2a1a0a", outline: "none", boxSizing: "border-box" }}
+                type="text"
+                placeholder="🔍 Search for a place..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+
+              {/* Single dropdown — content changes based on state */}
+              {searchQuery.length >= 3 && (searchStatus !== null || searchResults.length > 0) && (
+                <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#f5e8c8", border: "1px solid rgba(154,106,52,0.3)", borderTop: "2px solid #9a6a34", borderRadius: "0 0 3px 3px", zIndex: 10, marginTop: 0, overflow: "hidden", boxShadow: "0 4px 12px rgba(42,26,10,0.18)" }}>
+
+                  {searchStatus === "searching" && (
+                    <div style={{ padding: "10px 14px", fontSize: 13, color: "#9a7a50", fontStyle: "italic", fontFamily: "'Crimson Text', Georgia, serif" }}>
+                      Consulting the index…
+                    </div>
+                  )}
+
+                  {searchStatus === "no_results" && (
+                    <div style={{ padding: "10px 14px", fontSize: 13, color: "#8a7a6a", fontFamily: "'Crimson Text', Georgia, serif", fontStyle: "italic" }}>
+                      No places found. Try a different name, or enter coordinates below.
+                    </div>
+                  )}
+
+                  {searchStatus === null && searchResults.map((r, i) => (
+                    <div
+                      key={i}
+                      style={{ padding: "10px 14px", cursor: "pointer", fontSize: 14, borderBottom: i < searchResults.length - 1 ? "1px dashed rgba(154,106,52,0.2)" : "none", fontFamily: "'Crimson Text', Georgia, serif" }}
+                      onClick={() => {
+                        setSearchResults([]);
+                        setSearchQuery("");
+                        setSearchStatus(null);
+                        loadLocation(
+                          r.display_name.split(",").slice(0, 2).join(","),
+                          parseFloat(r.lat),
+                          parseFloat(r.lon)
+                        );
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(200,149,108,0.1)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >
+                      📍 {r.display_name}
+                    </div>
+                  ))}
+
+                </div>
+              )}
+            </div>
+
+            {/* Manual coordinates — directly under search, no big divider */}
+            <div style={{ display: "flex", gap: 6 }}>
+              <input
+                style={{ flex: 1, padding: "7px 10px", border: "1px solid rgba(154,106,52,0.25)", borderBottom: "2px solid rgba(154,106,52,0.4)", borderRadius: 0, fontFamily: "'Special Elite', 'Courier New', monospace", fontSize: 11, background: "#f5e8c8", color: "#2a1a0a", outline: "none" }}
+                type="text"
+                placeholder="Lat  e.g. 36.05"
+                value={manualLat}
+                onChange={(e) => setManualLat(e.target.value)}
+              />
+              <input
+                style={{ flex: 1, padding: "7px 10px", border: "1px solid rgba(154,106,52,0.25)", borderBottom: "2px solid rgba(154,106,52,0.4)", borderRadius: 0, fontFamily: "'Special Elite', 'Courier New', monospace", fontSize: 11, background: "#f5e8c8", color: "#2a1a0a", outline: "none" }}
+                type="text"
+                placeholder="Lng  e.g. -112.14"
+                value={manualLng}
+                onChange={(e) => setManualLng(e.target.value)}
+              />
+              <button
+                style={{ padding: "7px 14px", background: "#1a2916", color: "#f0d8b0", border: "2px solid rgba(200,149,108,0.3)", borderRadius: 2, fontFamily: "'Special Elite', monospace", fontSize: 10, letterSpacing: "0.08em", cursor: "pointer" }}
+                onClick={handleManualGo}
+              >
+                GO →
+              </button>
+            </div>
+          </div>
+
+          {/* ── Compact educational timeline ── */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, letterSpacing: "0.25em", textTransform: "uppercase", color: "#a09080", textAlign: "center", marginBottom: 8 }}>◆ Geological Time Scale ◆</div>
+            <div style={{ borderRadius: 2, overflow: "hidden", border: "1px solid rgba(42,26,10,0.15)", boxShadow: "0 1px 4px rgba(42,26,10,0.1)" }}>
+              {GEOLOGICAL_PERIODS.map((period, i) => (
+                <div key={period.name} style={{ display: "flex", alignItems: "center", gap: 0, borderBottom: i < GEOLOGICAL_PERIODS.length - 1 ? "1px solid rgba(42,26,10,0.07)" : "none" }}>
+                  <div style={{ width: 10, flexShrink: 0, background: period.color, alignSelf: "stretch", opacity: 0.85 }} />
+                  <div style={{ flex: 1, padding: "5px 10px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(253,244,224,0.55)" }}>
+                    <div>
+                      <span style={{ fontFamily: "'Crimson Text', Georgia, serif", fontSize: 13, fontWeight: 600, color: "#1a0e04" }}>{period.name}</span>
+                      <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, color: "#9a7a60", marginLeft: 8, letterSpacing: "0.06em" }}>{period.era}</span>
+                    </div>
+                    <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 8, color: "#b0a080", letterSpacing: "0.04em", flexShrink: 0 }}>
+                      {period.start > 1000 ? `${(period.start/1000).toFixed(1)}Ga` : `${period.start}Ma`}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: 10, fontFamily: "'Caveat', cursive", fontSize: 13, color: "rgba(100,50,15,0.5)", transform: "rotate(-1deg)", display: "inline-block" }}>If found, please return to field station.</div>
-          </div>
-
-          {/* GPS Button */}
-          <button
-            style={{ ...S.gpsBtn, ...(gpsLoading ? S.gpsBtnDisabled : {}) }}
-            onClick={handleGPS}
-            disabled={gpsLoading}
-          >
-            {gpsLoading ? "📡 Acquiring fix…" : "📡 Fix My Position"}
-          </button>
-
-          {/* Place Search */}
-          <div style={{ position: "relative", marginBottom: 20 }}>
-            <input
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid rgba(154,106,52,0.3)", borderBottom: "2px solid rgba(154,106,52,0.5)", borderRadius: 0, fontFamily: "'Crimson Text', Georgia, serif", fontSize: 16, background: "#f5e8c8", color: "#2a1a0a", outline: "none", boxSizing: "border-box" }}
-              type="text"
-              placeholder="🔍 Search for a place..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-
-            {/* Single dropdown — content changes based on state */}
-            {searchQuery.length >= 3 && (searchStatus !== null || searchResults.length > 0) && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#f5e8c8", border: "1px solid rgba(154,106,52,0.3)", borderTop: "2px solid #9a6a34", borderRadius: "0 0 3px 3px", zIndex: 10, marginTop: 0, overflow: "hidden", boxShadow: "0 4px 12px rgba(42,26,10,0.18)" }}>
-
-                {searchStatus === "searching" && (
-                  <div style={{ padding: "10px 14px", fontSize: 13, color: "#9a7a50", fontStyle: "italic", fontFamily: "'Crimson Text', Georgia, serif" }}>
-                    Consulting the index…
-                  </div>
-                )}
-
-                {searchStatus === "no_results" && (
-                  <div style={{ padding: "10px 14px", fontSize: 13, color: "#8a7a6a", fontFamily: "'Crimson Text', Georgia, serif", fontStyle: "italic" }}>
-                    No places found. Try a different name, or use the coordinates box below.
-                  </div>
-                )}
-
-                {searchStatus === null && searchResults.map((r, i) => (
-                  <div
-                    key={i}
-                    style={{ padding: "10px 14px", cursor: "pointer", fontSize: 14, borderBottom: i < searchResults.length - 1 ? "1px dashed rgba(154,106,52,0.2)" : "none", fontFamily: "'Crimson Text', Georgia, serif" }}
-                    onClick={() => {
-                      setSearchResults([]);
-                      setSearchQuery("");
-                      setSearchStatus(null);
-                      loadLocation(
-                        r.display_name.split(",").slice(0, 2).join(","),
-                        parseFloat(r.lat),
-                        parseFloat(r.lon)
-                      );
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = "rgba(200,149,108,0.1)"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                  >
-                    📍 {r.display_name}
-                  </div>
-                ))}
-
-              </div>
-            )}
+            <div style={{ fontFamily: "'Crimson Text', Georgia, serif", fontSize: 11, color: "#a09080", textAlign: "center", marginTop: 6, fontStyle: "italic" }}>4.6 billion years · tap a preset site to explore the record beneath it</div>
           </div>
 
           <div style={S.divider}>── known field sites ──</div>
@@ -1368,44 +1453,9 @@ export default function DeepTimeFieldGuide() {
             })}
           </div>
 
-          {/* Coverage disclaimer — field note style */}
-          <div style={{ background: "#f5e8c8", border: "1px solid rgba(42,26,10,0.18)", borderLeft: "3px solid #9a6a34", borderRadius: "0 3px 3px 0", padding: "10px 14px", marginBottom: 20, display: "flex", gap: 10, alignItems: "flex-start", backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 23px, rgba(80,50,15,0.07) 23px, rgba(80,50,15,0.07) 24px)" }}>
-            <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>📋</span>
-            <div style={{ fontSize: 13, color: "#5a4a30", lineHeight: 1.7, fontFamily: "'Crimson Text', Georgia, serif" }}>
-              <span style={{ fontFamily: "'Special Elite', monospace", fontSize: 9, letterSpacing: "0.12em", color: "#9a6a34", textTransform: "uppercase" }}>Coverage note — </span>
-              Geological data (Macrostrat) is strongest in North America. Fossil data (PBDB) is global but patchy. Many regions outside the US may show limited results.
-            </div>
-          </div>
-
-          {/* Manual Coordinates */}
-          <div style={S.divider}>── or enter coordinates ──</div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <input
-              style={{ flex: 1, padding: "8px 10px", border: "none", borderBottom: "2px solid rgba(154,106,52,0.45)", borderRadius: 0, fontFamily: "'Special Elite', 'Courier New', monospace", fontSize: 12, background: "rgba(200,160,90,0.07)", color: "#2a1a0a", outline: "none" }}
-              type="text"
-              placeholder="Lat  e.g. 26.05"
-              value={manualLat}
-              onChange={(e) => setManualLat(e.target.value)}
-            />
-            <input
-              style={{ flex: 1, padding: "8px 10px", border: "none", borderBottom: "2px solid rgba(154,106,52,0.45)", borderRadius: 0, fontFamily: "'Special Elite', 'Courier New', monospace", fontSize: 12, background: "rgba(200,160,90,0.07)", color: "#2a1a0a", outline: "none" }}
-              type="text"
-              placeholder="Lng  e.g. -80.24"
-              value={manualLng}
-              onChange={(e) => setManualLng(e.target.value)}
-            />
-            <button
-              style={{ padding: "8px 16px", background: "#1a2916", color: "#f0d8b0", border: "2px solid rgba(200,149,108,0.3)", borderRadius: 2, fontFamily: "'Special Elite', monospace", fontSize: 11, letterSpacing: "0.08em", cursor: "pointer" }}
-              onClick={handleManualGo}
-            >
-              GO →
-            </button>
-          </div>
-
         </div>
       )}
 
-      {/* Loading — field journal style */}
       {screen === "loading" && (
         <div style={S.loading}>
           <div style={{ position: "relative", width: 80, height: 80, marginBottom: 4 }}>
@@ -1509,16 +1559,32 @@ export default function DeepTimeFieldGuide() {
                   )}
                 </div>
               )}
+              {/* Era filter pills */}
+              {units.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, padding: '8px 16px 4px', flexWrap: 'wrap' }}>
+                  {[null, 'Cenozoic', 'Mesozoic', 'Paleozoic', 'Precambrian'].map(era => {
+                    const active = strataEraFilter === era;
+                    const eraColors = { Cenozoic: '#FFE619', Mesozoic: '#34B2C9', Paleozoic: '#F04028', Precambrian: '#F73667' };
+                    return (
+                      <button key={era ?? 'all'} onClick={() => setStrataEraFilter(era)}
+                        style={{ padding: '3px 10px', fontFamily: "'Special Elite', monospace", fontSize: 8, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: 2, border: active ? `1.5px solid ${eraColors[era] || '#9a6a34'}` : '1px solid rgba(154,106,52,0.3)', background: active ? (eraColors[era] ? `${eraColors[era]}28` : 'rgba(154,106,52,0.12)') : 'transparent', color: active ? '#1a0e04' : '#8a7a6a' }}>
+                        {era ?? 'All'}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div style={S.strataHeader}>{"⬇\uFE0F"} Surface ↓ Depth · tap any layer</div>
               {(() => {
                 const sq = strataSearch.toLowerCase();
-                const filteredUnits = sq
-                  ? units.filter(u =>
-                      (u.strat_name || "").toLowerCase().includes(sq) ||
-                      (u.lith || "").toLowerCase().includes(sq) ||
-                      (u.environ || "").toLowerCase().includes(sq)
-                    )
-                  : units;
+                const filteredUnits = (strataEraFilter
+                  ? units.filter(u => getPeriodForAge((u.b_age + u.t_age) / 2).era === strataEraFilter)
+                  : units
+                ).filter(u => !sq || (
+                  (u.strat_name || "").toLowerCase().includes(sq) ||
+                  (u.lith || "").toLowerCase().includes(sq) ||
+                  (u.environ || "").toLowerCase().includes(sq)
+                ));
                 const ERA_STYLES = {
                   "Cenozoic":   { bg: "rgba(255,230,25,0.10)",  border: "#FFE619", emoji: "🦣", label: "Cenozoic" },
                   "Mesozoic":   { bg: "rgba(52,178,201,0.10)",  border: "#34B2C9", emoji: "🦕", label: "Mesozoic" },
@@ -1606,15 +1672,31 @@ export default function DeepTimeFieldGuide() {
                   )}
                 </div>
               )}
+              {/* Era filter pills for fossils */}
+              {fossils.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, padding: '4px 16px 4px', flexWrap: 'wrap' }}>
+                  {[null, 'Cenozoic', 'Mesozoic', 'Paleozoic', 'Precambrian'].map(era => {
+                    const active = fossilEraFilter === era;
+                    const eraColors = { Cenozoic: '#FFE619', Mesozoic: '#34B2C9', Paleozoic: '#F04028', Precambrian: '#F73667' };
+                    return (
+                      <button key={era ?? 'all'} onClick={() => setFossilEraFilter(era)}
+                        style={{ padding: '3px 10px', fontFamily: "'Special Elite', monospace", fontSize: 8, letterSpacing: '0.12em', textTransform: 'uppercase', cursor: 'pointer', borderRadius: 2, border: active ? `1.5px solid ${eraColors[era] || '#9a6a34'}` : '1px solid rgba(154,106,52,0.3)', background: active ? (eraColors[era] ? `${eraColors[era]}28` : 'rgba(154,106,52,0.12)') : 'transparent', color: active ? '#1a0e04' : '#8a7a6a' }}>
+                        {era ?? 'All'}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               <div style={S.fossilHeader}>Fossil taxa found within ~100km</div>
               {fossils.length > 0 ? (() => {
                 const fq = fossilSearch.toLowerCase();
-                const filteredFossils = fq
-                  ? fossils.filter(f =>
-                      (f.tna || "").toLowerCase().includes(fq) ||
-                      (f.phl || "").toLowerCase().includes(fq)
-                    )
-                  : fossils;
+                const filteredFossils = (fossilEraFilter
+                  ? fossils.filter(f => getPeriodForAge((f.max_ma + f.min_ma) / 2).era === fossilEraFilter)
+                  : fossils
+                ).filter(f => !fq || (
+                  (f.tna || "").toLowerCase().includes(fq) ||
+                  (f.phl || "").toLowerCase().includes(fq)
+                ));
 
                 if (filteredFossils.length === 0 && fossilSearch) {
                   return (
@@ -1683,7 +1765,8 @@ export default function DeepTimeFieldGuide() {
       {/* Footer */}
       <div style={S.footer}>
         Field Journal No. 1 · Deep Time Studios
-        <br />Stratigraphic data: Macrostrat · Fossil occurrences: PBDB
+        <br />Stratigraphic data: <a href="https://macrostrat.org" style={S.footerLink} target="_blank" rel="noopener noreferrer">Macrostrat</a> · Fossil occurrences: <a href="https://paleobiodb.org" style={S.footerLink} target="_blank" rel="noopener noreferrer">PBDB</a>
+        <br /><span style={{ color: 'rgba(200,149,108,0.4)', fontSize: 8 }}>Coverage strongest in North America · global fossil data varies by region</span>
         <br />{"◆"} compiled by Arjun Ravi · v0.2 {"◆"}
       </div>
     </div>
